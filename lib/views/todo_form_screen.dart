@@ -3,9 +3,10 @@ import '../models/todo.dart';
 import '../controllers/todo_controller.dart';
 
 class TodoFormScreen extends StatefulWidget {
+  final TodoController controller;
   final Function(Todo) onTodoAdded;
 
-  TodoFormScreen({super.key, required this.onTodoAdded});
+  TodoFormScreen({required this.controller, required this.onTodoAdded});
 
   @override
   _TodoFormScreenState createState() => _TodoFormScreenState();
@@ -77,17 +78,21 @@ class _TodoFormScreenState extends State<TodoFormScreen> {
               ),
               SizedBox(height: 16.0),
               ElevatedButton(
-                onPressed: () {
+                onPressed: () async {
                   if (_formKey.currentState!.validate()) {
-                    final todo = Todo(
-                      id: DateTime.now().millisecondsSinceEpoch,
-                      title: _titleController.text,
-                      description: _descriptionController.text,
-                      dueDate: _dueDate ?? DateTime.now(),
-                    );
-                    TodoController().addTodo(todo);
-                    widget.onTodoAdded(todo);
-                    Navigator.of(context).pop();
+                    if (await widget.controller.isInitialized()) {
+                      final todo = Todo(
+                        id: DateTime.now().millisecondsSinceEpoch,
+                        title: _titleController.text,
+                        description: _descriptionController.text,
+                        dueDate: _dueDate ?? DateTime.now(),
+                      );
+                      await widget.controller.addTodo(todo);
+                      widget.onTodoAdded(todo);
+                      Navigator.of(context).pop();
+                    } else {
+                      print('Database not initialized');
+                    }
                   }
                 },
                 child: Text('Add Task'),

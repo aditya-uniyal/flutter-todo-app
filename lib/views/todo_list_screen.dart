@@ -14,14 +14,25 @@ class _TodoListScreenState extends State<TodoListScreen> {
   final TodoController _controller = TodoController();
   List<Todo> _tasks = [];
 
+
   @override
   void initState() {
     super.initState();
-    _loadTasks();
+    _initDatabase();
   }
 
   Future<void> _loadTasks() async {
     _tasks = await _controller.fetchTasks();
+    setState(() {});
+  }
+
+  Future<void> _initDatabase() async {
+    await _controller.init();
+    _loadTasks();
+  }
+
+  void _handleTodoAdded(Todo todo) {
+    _tasks.add(todo);
     setState(() {});
   }
 
@@ -53,16 +64,16 @@ class _TodoListScreenState extends State<TodoListScreen> {
         onPressed: () {
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => TodoFormScreen(onTodoAdded: _handleTodoAdded)),
+            MaterialPageRoute(
+              builder: (context) => TodoFormScreen(
+                controller: _controller,
+                onTodoAdded: _handleTodoAdded,
+              ),
+            ),
           );
         },
         child: Icon(Icons.add),
       ),
     );
-  }
-
-  void _handleTodoAdded(Todo todo) {
-    _tasks.add(todo);
-    setState(() {});
   }
 }

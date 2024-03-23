@@ -1,48 +1,73 @@
+import 'package:path/path.dart';
+import 'package:sqflite/sqflite.dart';
 import '../models/todo.dart';
 
 class TodoController {
-  List<Todo> _todos = [];
+  Database? _database;
 
-  List<Todo> get todos => _todos;
 
-  void addTodo(Todo todo) {
-    _todos.add(todo);
+  Future<void> init() async {
+    _database = await openDatabase(
+      join(await getDatabasesPath(), 'todo_database.db'),
+      onCreate: (db, version) {
+        return db.execute(
+          'CREATE TABLE todos(id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT, description TEXT, dueDate TEXT, isCompleted INTEGER)',
+        );
+      },
+      version: 1,
+    );
   }
 
-  void updateTodo(Todo todo) {
-    final index = _todos.indexWhere((t) => t.id == todo.id);
-    if (index != -1) {
-      _todos[index] = todo;
-    }
-  }
-
-  void deleteTodo(Todo todo) {
-    _todos.removeWhere((t) => t.id == todo.id);
+  Future<bool> isInitialized() async {
+    return _database != null;
   }
 
   Future<List<Todo>> fetchTasks() async {
-    // Simulate fetching tasks from a data source (e.g., database, API)
-    await Future.delayed(Duration(seconds: 1));
-    return [
-      Todo(
-        id: 1,
-        title: 'Buy groceries',
-        description: 'Milk, eggs, bread, and vegetables',
-        dueDate: DateTime.now().add(Duration(days: 2)),
-      ),
-      Todo(
-        id: 2,
-        title: 'Finish project report',
-        description: 'Write the conclusion and submit the report',
-        dueDate: DateTime.now().add(Duration(days: 4)),
-        isCompleted: true,
-      ),
-      Todo(
-        id: 3,
-        title: 'Go for a run',
-        description: '30 minutes of jogging',
-        dueDate: DateTime.now().add(Duration(days: 1)),
-      ),
-    ];
+    if (_database == null) {
+      throw Exception('Database not initialized');
+    }
+
+    final List<Map<String, dynamic>> maps = await _database!.query('todos');
+    return List.generate(maps.length, (i) {
+      return Todo.fromMap(maps[i]);
+    });
   }
+
+  Future<void> addTodo(Todo todo) async {
+    if (_database == null) {
+      throw Exception('Database not initialized');
+    }
+
+    await _database!.insert(
+      'todos',
+      todo.toMap(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  Future<void> updateTodo(Todo todo) async {
+    if (_database == null) {
+      throw Exception('Database not initialized');
+    }
+
+    await _database!.update(
+      'todos',
+      todo.toMap(),
+      where: 'id = ?',
+      whereArgs: [todo.id],
+    );
+  }
+
+  Future<void> deleteTodo(Todo todo) async {
+    if (_database == null) {
+      throw Exception('Database not initialized');
+    }
+
+    await _database!.delete(
+      'todos',
+      where: 'id = ?',
+      whereArgs: [todo.id],
+    );
+  }
+  // Add a toMap() method to the Todo model
 }
